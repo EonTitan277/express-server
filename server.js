@@ -42,6 +42,10 @@ const requireLogin = (req, res, next) => {
 
 // Routes
 app.get('/', (req, res) => {
+    if (req.session && req.session.isLoggedIn) {
+        return res.redirect('/dashboard.html');
+    }
+    // Not logged in — serve the login page as usual
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
