@@ -52,7 +52,7 @@ app.get('/', (req, res) => {
 });
 
 // Protect all other static files (e.g., /dashboard.html)
-app.get('*', requireLogin, (req, res, next) => {
+app.get('/*splat', requireLogin, (req, res, next) => {
     next(); // Let express.static handle the actual file serving
 });
 
