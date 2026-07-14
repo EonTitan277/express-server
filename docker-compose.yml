@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  chore-rules-backend:
+    build: .
+    container_name: chore-rules-backend
+    restart: unless-stopped
+    ports:
+      - "${HOST_PORT:-3000}:3000"
+    volumes:
+      - ./logs:/usr/src/app/logs # Map logs so Fail2Ban can read them
+      - "${FRONTEND_PATH:-path-to-static-files}:/usr/src/app/public" # Map the static files
