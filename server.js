@@ -13,25 +13,21 @@ const PORT = 3000;
 
 app.set('trust proxy', 1);
 
-// Setup logging for Fail2Ban
 const logFile = path.join(__dirname, 'logs', 'auth.log');
 fs.mkdirSync(path.dirname(logFile), { recursive: true });
 
 // Middleware
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public'), {
-    index: false // We will handle routing manually to protect files
-}));
 
 // Session configuration (HTTP-only cookie)
 app.use(session({
-    secret: process.env.SESSION_SECRET,  // from .env
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: { 
         httpOnly: true,
         secure: true,
-        maxAge: 3600000 // 1 hour
+        maxAge: 3600000
     }
 }));
 
@@ -40,21 +36,24 @@ const requireLogin = (req, res, next) => {
     if (req.session && req.session.isLoggedIn) {
         return next();
     } else {
-        // Redirect unauthenticated users to the login page
         return res.redirect('/');
     }
 };
 
 // Routes
 app.get('/', (req, res) => {
-    // Always serve index.html at the root
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Protect all other static files (e.g., /dashboard.html)
+// Protect all other static files (e.g., /dashboard.html) — now runs BEFORE static
 app.get('/*splat', requireLogin, (req, res, next) => {
-    next(); // Let express.static handle the actual file serving
+    next();
 });
+
+// Static file serving now only reached after passing requireLogin
+app.use(express.static(path.join(__dirname, 'public'), {
+    index: false
+}));
 
 // Rate limiter for login endpoint
 const loginLimiter = rateLimit({
