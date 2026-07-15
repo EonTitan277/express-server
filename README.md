@@ -10,6 +10,7 @@ A simple Node.js Express server with session-based authentication, rate limiting
 - Fail2Ban-compatible auth logging
 - Docker & Docker Compose ready
 - Environment-based configuration
+- **Dynamic council info injection** - Updates HTML content with environment variables on startup
 
 ## Quick Start
 
@@ -23,19 +24,24 @@ docker-compose up -d --build
 
 ## Environment Variables
 
-Create a `.env` file with:
+Copy the example file and customize it:
 
-```env
-PORT=3000
-USERNAME=your_username
-PASSWORD_HASH=your_bcrypt_hash
-SESSION_SECRET=your_secret_key
-```
-
-Generate a password hash:
 ```bash
-node hash-passwords.js "your_password"
+cp .env.example .env
 ```
+
+Then edit `.env` with your values:
+- `SESSION_SECRET` - Generate with: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
+- `USERNAME` / `PASSWORD_HASH` - Use `node hash-passwords.js "your_password"` to generate the hash
+- `COUNCIL_NAME` / `COUNCIL_PHONE` - Council contact info for HTML injection
+
+## Dynamic Council Info Injection
+
+On server startup, the HTML file at `public/pages/main/main-rules.html` is automatically updated:
+- Elements with class `pn` are replaced with `COUNCIL_NAME` value
+- Elements with class `ppn` are replaced with `COUNCIL_PHONE` value
+
+This runs before the server starts serving requests, ensuring the static file middleware serves the updated content.
 
 ## Project Structure
 
@@ -60,9 +66,3 @@ express-server/
 5. **Fail2Ban Logging** - Structured logs for automated banning
 6. **Proxy-aware IP Detection** - Reads `X-Forwarded-For` header
 7. **Static File Protection** - All routes except `/` require auth
-
-## Generating a Secure Session Secret
-
-```bash
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-```

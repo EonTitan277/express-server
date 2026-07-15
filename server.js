@@ -8,6 +8,8 @@ const session = require('express-session');
 const path = require('path');
 const fs = require('fs');
 
+const { updateCouncilInfo } = require('./scripts/update-council-info');
+
 const app = express();
 const PORT = 3000;
 
@@ -94,6 +96,16 @@ app.post('/login', loginLimiter, async (req, res) => {
         res.redirect('/?error=1'); // Redirect back to login
     }
 });
+
+// Update council information in main-rules.html before server starts
+(async () => {
+    try {
+        await updateCouncilInfo();
+    } catch (error) {
+        console.error('Failed to update council information:', error);
+        process.exit(1);
+    }
+})();
 
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
