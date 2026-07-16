@@ -20,6 +20,11 @@ fs.mkdirSync(path.dirname(logFile), { recursive: true });
 
 // Middleware
 app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+
+// Ensure data directory exists
+const dataDir = path.join(__dirname, '..', 'chore-rules', 'data');
+fs.mkdirSync(dataDir, { recursive: true });
 
 // Session configuration (HTTP-only cookie)
 app.use(session({
@@ -74,19 +79,29 @@ const loginLimiter = rateLimit({
 app.post('/login', loginLimiter, async (req, res) => {
     const { username, password } = req.body;
     
-    const validUsername = process.env.USERNAME;
-    const validPasswordHash = process.env.PASSWORD_HASH;
-    
-    if (!validUsername || !validPasswordHash) {
-        console.error('Missing credentials in environment');
-        return res.status(500).send('Server configuration error');
-    }
-
     // Get client IP (Accounting for Nginx Proxy Manager)
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
-    if (username === validUsername && await bcrypt.compare(password, validPasswordHash)) {
+    // Check all users defined as USERNAME_1, PASSWORD_HASH_1, USERNAME_2, PASSWORD_HASH_2, etc.
+    let matched = false;
+    for (let i = 1; process.env[`USERNAME_${i}`]; i++) {
+        const validUsername = process.env[`USERNAME_${i}`];
+        const validPasswordHash = process.env[`PASSWORD_HASH_${i}`];
+        
+        if (!validPasswordHash) {
+            console.error(`Missing PASSWORD_HASH_${i} for user ${validUsername}`);
+            continue;
+        }
+
+        if (username === validUsername && await bcrypt.compare(password, validPasswordHash)) {
+            matched = true;
+            break;
+        }
+    }
+
+    if (matched) {
         req.session.isLoggedIn = true;
+        req.session.username = username; // Track which user logged in
         res.redirect('/dashboard.html');
     } else {
         // Log failure in a format Fail2Ban can read
@@ -94,6 +109,64 @@ app.post('/login', loginLimiter, async (req, res) => {
         fs.appendFileSync(logFile, logEntry);
         
         res.redirect('/?error=1'); // Redirect back to login
+    }
+});
+
+// API Routes - All protected by requireLogin middleware
+
+// GET /api/checkbox-states - Read checkbox states
+app.get('/api/checkbox-states', requireLogin, (req, res) => {
+    const filePath = path.join(dataDir, 'checkbox-states.json');
+    try {
+        if (fs.existsSync(filePath)) {
+            const data = fs.readFileSync(filePath, 'utf8');
+            res.json(JSON.parse(data));
+        } else {
+            res.json({});
+        }
+    } catch (error) {
+        console.error('Error reading checkbox-states.json:', error);
+        res.json({});
+    }
+});
+
+// POST /api/checkbox-states - Save checkbox states
+app.post('/api/checkbox-states', requireLogin, (req, res) => {
+    const filePath = path.join(dataDir, 'checkbox-states.json');
+    try {
+        fs.writeFileSync(filePath, JSON.stringify(req.body, null, 2), 'utf8');
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error writing checkbox-states.json:', error);
+        res.status(500).json({ success: false, error: 'Failed to save checkbox states' });
+    }
+});
+
+// GET /api/text-states - Read text states
+app.get('/api/text-states', requireLogin, (req, res) => {
+    const filePath = path.join(dataDir, 'text-states.json');
+    try {
+        if (fs.existsSync(filePath)) {
+            const data = fs.readFileSync(filePath, 'utf8');
+            res.json(JSON.parse(data));
+        } else {
+            res.json({});
+        }
+    } catch (error) {
+        console.error('Error reading text-states.json:', error);
+        res.json({});
+    }
+});
+
+// POST /api/text-states - Save text states
+app.post('/api/text-states', requireLogin, (req, res) => {
+    const filePath = path.join(dataDir, 'text-states.json');
+    try {
+        fs.writeFileSync(filePath, JSON.stringify(req.body, null, 2), 'utf8');
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error writing text-states.json:', error);
+        res.status(500).json({ success: false, error: 'Failed to save text states' });
     }
 });
 

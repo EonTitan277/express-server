@@ -6,11 +6,16 @@ services:
     ports:
       - "${HOST_PORT:-3000}:3000"
     volumes:
-      - ./logs:/usr/src/app/logs # Map logs so Fail2Ban can read them
-      - "${FRONTEND_PATH:-path-to-static-files}:/usr/src/app/public" # Map the static files
+      - "${LOGS_DIR:-./logs}:/usr/src/app/logs" # Map logs so Fail2Ban can read them
+      - "${FRONTEND_PATH:-./public}:/usr/src/app/public" # Map the static files
     environment:
-      PASSWORD_HASH: ${PASSWORD_HASH:?error}
-      USERNAME: ${USERNAME:?error}
+      TZ: America/New_York
       SESSION_SECRET: ${SESSION_SECRET:?error}
+      USERNAME_1: ${USERNAME_1:?error}
+      PASSWORD_HASH_1: ${PASSWORD_HASH_1:?error}
+      USERNAME_2: ${USERNAME_2}
+      PASSWORD_HASH_2: ${PASSWORD_HASH_2}
+      KIDUSER: ${KIDUSER:?error}
+      KIDPASS_HASH: ${KIDPASS_HASH:?error}
       COUNCIL_NAME: ${COUNCIL_NAME}
       COUNCIL_PHONE: ${COUNCIL_PHONE}
