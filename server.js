@@ -56,15 +56,19 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Protect all other static files (e.g., /dashboard.html) — now runs BEFORE static
-app.get('/*splat', requireLogin, (req, res, next) => {
-    next();
-});
-
-// Static file serving now only reached after passing requireLogin
+// Static file serving - serve CSS, JS, images without authentication
 app.use(express.static(path.join(__dirname, 'public'), {
     index: false
 }));
+
+// Protect HTML pages (e.g., /dashboard.html) - but not static assets
+app.use((req, res, next) => {
+    // Only require login for HTML files (except index.html which is the login page)
+    if (req.path.endsWith('.html') && req.path !== '/index.html') {
+        return requireLogin(req, res, next);
+    }
+    next();
+});
 
 // Rate limiter for login endpoint
 const loginLimiter = rateLimit({
