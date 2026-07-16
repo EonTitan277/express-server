@@ -23,7 +23,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 // Ensure data directory exists
-const dataDir = path.join(__dirname, '..', 'chore-rules', 'data');
+const dataDir = path.join(__dirname, '..', 'public', 'data');
 fs.mkdirSync(dataDir, { recursive: true });
 
 // Session configuration (HTTP-only cookie)
@@ -34,6 +34,7 @@ app.use(session({
     cookie: { 
         httpOnly: true,
         secure: true,
+        sameSite: 'lax',
         maxAge: 3600000
     }
 }));
