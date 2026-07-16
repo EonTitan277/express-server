@@ -70,6 +70,14 @@ app.use((req, res, next) => {
     next();
 });
 
+// Prevent caching of dynamic/authenticated content (HTML pages, API responses, redirects)
+app.use((req, res, next) => {
+    if (req.path.endsWith('.html') || req.path.startsWith('/api/') || req.path === '/') {
+        res.set('Cache-Control', 'no-store');
+    }
+    next();
+});
+
 // Protect HTML pages (e.g., /dashboard.html) - but not static assets
 app.use((req, res, next) => {
     // Only require login for HTML files (except index.html which is the login page)
