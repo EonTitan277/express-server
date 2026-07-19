@@ -10,7 +10,8 @@ A simple Node.js Express server with session-based authentication, rate limiting
 - Fail2Ban-compatible auth logging
 - Docker & Docker Compose ready
 - Environment-based configuration
-- **Dynamic council info injection** - Updates HTML content with environment variables on startup
+- Dynamic council info injection - Updates HTML content with environment variables on startup
+- Kid user role - Read-only access to text content, full checkbox interaction
 
 ## Quick Start
 
@@ -32,7 +33,8 @@ cp .env.example .env
 
 Then edit `.env` with your values:
 - `SESSION_SECRET` - Generate with: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
-- `USERNAME` / `PASSWORD_HASH` - Use `node hash-passwords.js "your_password"` to generate the hash
+- `USERNAME_#` / `PASSWORD_HASH_#` & `KIDUSER` / `KIDPASS_HASH`
+  - Use `npm run hash-passwords "your_password"` to generate the hashes
 - `COUNCIL_NAME` / `COUNCIL_PHONE` - Council contact info for HTML injection
 
 ## Dynamic Council Info Injection
@@ -43,6 +45,14 @@ On server startup, the HTML file at `public/pages/main/main-rules.html` is autom
 
 This runs before the server starts serving requests, ensuring the static file middleware serves the updated content.
 
+## Kid User Role
+
+A second user role (`kid`) provides read-only access:
+- Can view all text content but cannot edit it
+- Full checkbox interaction (toggle, save, reset)
+- Configured via `KIDUSER` and `KIDPASS_HASH` environment variables
+- Backend enforces role restrictions on `/api/text-states` POST endpoint
+
 ## Project Structure
 
 ```
@@ -52,9 +62,10 @@ express-server/
 ├── package.json
 ├── Dockerfile
 ├── docker-compose.yml
-├── .env                # Your config (not committed)
-├── logs/               # Auth logs for Fail2Ban
-└── public/             # Static files (mounted in Docker)
+├── .env                # Your config (copied .env.example)
+├── scripts/
+├── logs/               # Auth logs for Fail2Ban (mkdir logs)
+└── public/             # Static files (mounted in Docker) (mkdir public)
 ```
 
 ## Security Features

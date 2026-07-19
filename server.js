@@ -48,6 +48,16 @@ const requireLogin = (req, res, next) => {
     }
 };
 
+// Role-based authorization middleware.
+// `allowedRoles` is a list of roles permitted to access the route.
+// Must be composed AFTER requireLogin so req.session.role is populated.
+const requireRole = (...allowedRoles) => (req, res, next) => {
+    if (req.session && allowedRoles.includes(req.session.role)) {
+        return next();
+    }
+    return res.status(403).json({ success: false, error: 'Forbidden: insufficient role' });
+};
+
 // Routes
 app.get('/', (req, res) => {
     if (req.session && req.session.isLoggedIn) {
@@ -123,6 +133,15 @@ app.post('/login', loginLimiter, async (req, res) => {
     if (matched) {
         req.session.isLoggedIn = true;
         req.session.username = username; // Track which user logged in
+        req.session.role = 'editor';
+        res.redirect('/dashboard.html');
+    } else if (process.env.KIDUSER && process.env.KIDPASS_HASH &&
+               username === process.env.KIDUSER &&
+               await bcrypt.compare(password, process.env.KIDPASS_HASH)) {
+        // Kid user — can toggle checkboxes but cannot edit contenteditable text
+        req.session.isLoggedIn = true;
+        req.session.username = process.env.KIDUSER;
+        req.session.role = 'kid';
         res.redirect('/dashboard.html');
     } else {
         // Log failure in a format Fail2Ban can read
@@ -134,6 +153,12 @@ app.post('/login', loginLimiter, async (req, res) => {
 });
 
 // API Routes - All protected by requireLogin middleware
+
+// GET /api/me - Return the authenticated user's identity and role.
+// The frontend uses this to decide whether to enable contenteditable fields.
+app.get('/api/me', requireLogin, (req, res) => {
+    res.json({ username: req.session.username, role: req.session.role });
+});
 
 // GET /api/checkbox-states - Read checkbox states
 app.get('/api/checkbox-states', requireLogin, (req, res) => {
@@ -179,8 +204,8 @@ app.get('/api/text-states', requireLogin, (req, res) => {
     }
 });
 
-// POST /api/text-states - Save text states
-app.post('/api/text-states', requireLogin, (req, res) => {
+// POST /api/text-states - Save text states (editors only; kid role is read-only)
+app.post('/api/text-states', requireLogin, requireRole('editor'), (req, res) => {
     const filePath = path.join(dataDir, 'text-states.json');
     try {
         fs.writeFileSync(filePath, JSON.stringify(req.body, null, 2), 'utf8');
