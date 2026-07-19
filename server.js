@@ -67,6 +67,28 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Prevent caching of dynamic/authenticated content (HTML pages, API responses, redirects)
+// MUST run before express.static so headers are set before the file is served.
+app.use((req, res, next) => {
+    if (req.path.endsWith('.html') || req.path.startsWith('/api/') || req.path === '/') {
+        res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+        res.set('Pragma', 'no-cache');
+        res.set('Expires', '0');
+    }
+    next();
+});
+
+// Protect HTML pages (e.g., /dashboard.html) - but not static assets
+// MUST run before express.static so protected pages are never served from disk
+// to unauthenticated users (including via browser back-button cache).
+app.use((req, res, next) => {
+    // Only require login for HTML files (except index.html which is the login page)
+    if (req.path.endsWith('.html') && req.path !== '/index.html') {
+        return requireLogin(req, res, next);
+    }
+    next();
+});
+
 // Static file serving - serve CSS, JS, images without authentication
 app.use(express.static(path.join(__dirname, 'public'), {
     index: false
@@ -76,23 +98,6 @@ app.use(express.static(path.join(__dirname, 'public'), {
 app.use((req, res, next) => {
     if (req.path.endsWith('.css') || req.path.endsWith('.js') || req.path.match(/\.(png|jpg|jpeg|gif|svg|ico)$/)) {
         console.log(`Static file request: ${req.method} ${req.path} - IP: ${req.ip}`);
-    }
-    next();
-});
-
-// Prevent caching of dynamic/authenticated content (HTML pages, API responses, redirects)
-app.use((req, res, next) => {
-    if (req.path.endsWith('.html') || req.path.startsWith('/api/') || req.path === '/') {
-        res.set('Cache-Control', 'no-store');
-    }
-    next();
-});
-
-// Protect HTML pages (e.g., /dashboard.html) - but not static assets
-app.use((req, res, next) => {
-    // Only require login for HTML files (except index.html which is the login page)
-    if (req.path.endsWith('.html') && req.path !== '/index.html') {
-        return requireLogin(req, res, next);
     }
     next();
 });
@@ -150,6 +155,18 @@ app.post('/login', loginLimiter, async (req, res) => {
         
         res.redirect('/?error=1'); // Redirect back to login
     }
+});
+
+// Logout Handler - destroys the session and redirects to the login page
+app.post('/logout', (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            console.error('Error destroying session:', err);
+            return res.status(500).json({ success: false, error: 'Logout failed' });
+        }
+        res.clearCookie('connect.sid');
+        res.redirect('/');
+    });
 });
 
 // API Routes - All protected by requireLogin middleware
