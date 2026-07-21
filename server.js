@@ -11,7 +11,7 @@ const fs = require('fs');
 const { updateCouncilInfo } = require('./scripts/update-council-info');
 
 const app = express();
-const PORT = 3000;
+const PORT = 3001;
 
 app.set('trust proxy', 1);
 

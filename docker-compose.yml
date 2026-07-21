@@ -4,7 +4,7 @@ services:
     container_name: chore-rules-backend
     restart: "no"
     ports:
-      - "${HOST_PORT:-3000}:3000"
+      - "${HOST_PORT:-3001}:3001"
     volumes:
       - "${LOGS_DIR:-./logs}:/usr/src/app/logs" # Map logs so Fail2Ban can read them
       - "${FRONTEND_PATH:-./public}:/usr/src/app/public" # Map the static files

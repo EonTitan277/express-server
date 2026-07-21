@@ -15,7 +15,7 @@ A simple Node.js Express server with session-based authentication, rate limiting
 
 ## Quick Start
 
-Server runs at `http://localhost:3000`
+Server runs at `http://localhost:3001`
 
 ### Docker
 
